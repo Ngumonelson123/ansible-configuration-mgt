@@ -28,19 +28,14 @@ pipeline {
             }
         }
 
-        stage('Prepare Ansible Environment') {
-            steps {
-                sh 'echo "Deploying to ${env} environment"'
-            }
-        }
-
         stage('Run Ansible Playbook') {
             steps {
                 ansiblePlaybook(
                     playbook: 'playbooks/site.yml',
-                    inventory: "inventory/${env}",
+                    inventory: "inventory/${params.env}",
                     credentialsId: 'ansible-key',
-                    colorized: true
+                    colorized: true,
+                    installation: 'ansible'
                 )
             }
         }
