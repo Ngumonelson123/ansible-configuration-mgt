@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'env', defaultValue: 'dev', description: 'Deployment environment (dev/sit/uat)')
+        string(name: 'env', defaultValue: 'dev', description: 'Deployment environment')
     }
 
     environment {
@@ -30,13 +30,16 @@ pipeline {
 
         stage('Run Ansible Playbook') {
             steps {
-                ansiblePlaybook(
-                    playbook: 'playbooks/site.yml',
-                    inventory: "inventory/${params.env}",
-                    credentialsId: 'ansible-key',
-                    colorized: true,
-                    installation: 'ansible'
-                )
+                script {
+                    def inventory = params.env
+                    ansiblePlaybook(
+                        playbook: 'playbooks/site.yml',
+                        inventory: "inventory/${inventory}",
+                        credentialsId: 'ansible-key',
+                        colorized: true,
+                        installation: 'ansible'
+                    )
+                }
             }
         }
 
