@@ -1,0 +1,41 @@
+# CI Environment - Nginx reverse proxy
+# Proxies traffic to Jenkins, SonarQube, and Artifactory
+
+server {
+    listen 80;
+    server_name ci.infradev.{{ domain_name | default('example.com') }};
+
+    location / {
+        proxy_pass http://{{ jenkins_private_ip | default('127.0.0.1') }}:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name sonar.infradev.{{ domain_name | default('example.com') }};
+
+    location / {
+        proxy_pass http://{{ sonarqube_private_ip | default('127.0.0.1') }}:9000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name artifacts.infradev.{{ domain_name | default('example.com') }};
+
+    location / {
+        proxy_pass http://{{ artifactory_private_ip | default('127.0.0.1') }}:8082;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

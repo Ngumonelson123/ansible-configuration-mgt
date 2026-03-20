@@ -1,0 +1,26 @@
+[tooling]
+100.25.77.116 ansible_user=ubuntu ansible_ssh_private_key_file=../project14-key.pem ansible_ssh_extra_args="-o IdentitiesOnly=yes"
+
+[todo]
+44.193.2.235 ansible_user=ubuntu ansible_ssh_private_key_file=../project14-key.pem ansible_ssh_extra_args="-o IdentitiesOnly=yes"
+
+[nginx]
+44.222.137.209 ansible_user=ubuntu ansible_ssh_private_key_file=../project14-key.pem ansible_ssh_extra_args="-o IdentitiesOnly=yes"
+
+[db:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=../project14-key.pem
+ansible_ssh_extra_args="-o IdentitiesOnly=yes"
+ansible_python_interpreter=/usr/bin/python3
+
+[db]
+98.86.118.151
+
+[dev:children]
+tooling
+todo
+nginx
+db
+
+[dev:vars]
+ansible_python_interpreter=/usr/bin/python3

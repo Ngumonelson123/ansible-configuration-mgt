@@ -1,0 +1,120 @@
+---
+- name: Install Java 11
+  apt:
+    name: openjdk-11-jdk
+    state: present
+    update_cache: yes
+
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+
+- name: Start and enable PostgreSQL
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create artifactory system group
+  group:
+    name: artifactory
+    state: present
+
+- name: Create artifactory system user
+  user:
+    name: artifactory
+    group: artifactory
+    system: yes
+    shell: /bin/bash
+    create_home: no
+    state: present
+
+- name: Create artifactory PostgreSQL user
+  become_user: postgres
+  postgresql_user:
+    name: artifactory
+    password: artifactory
+    state: present
+
+- name: Create artifactory database
+  become_user: postgres
+  postgresql_db:
+    name: artifactory
+    owner: artifactory
+    state: present
+
+- name: Add JFrog apt key
+  shell: |
+    wget -qO - https://releases.jfrog.io/artifactory/api/gpg/key/public | \
+    gpg --dearmor -o /usr/share/keyrings/jfrog-keyring.gpg
+    chmod 644 /usr/share/keyrings/jfrog-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/jfrog-keyring.gpg
+
+- name: Add JFrog Artifactory OSS repository
+  copy:
+    dest: /etc/apt/sources.list.d/artifactory.list
+    content: "deb [signed-by=/usr/share/keyrings/jfrog-keyring.gpg] https://releases.jfrog.io/artifactory/artifactory-debs xenial main\n"
+    mode: "0644"
+
+- name: Install Artifactory OSS
+  apt:
+    name: jfrog-artifactory-oss
+    state: present
+    update_cache: yes
+
+- name: Create Artifactory var/etc directory
+  file:
+    path: /opt/jfrog/artifactory/var/etc
+    state: directory
+    owner: artifactory
+    group: artifactory
+    mode: "0755"
+
+- name: Configure Artifactory to use PostgreSQL
+  copy:
+    dest: /opt/jfrog/artifactory/var/etc/system.yaml
+    content: |
+      configVersion: 1
+      shared:
+        database:
+          driver: org.postgresql.Driver
+          type: postgresql
+          url: "jdbc:postgresql://localhost:5432/artifactory"
+          username: artifactory
+          password: artifactory
+        extraJavaOpts: "-Xms256m -Xmx1g"
+    owner: artifactory
+    group: artifactory
+    mode: "0644"
+
+- name: Fix ownership on entire Artifactory directory
+  file:
+    path: /opt/jfrog/artifactory
+    owner: artifactory
+    group: artifactory
+    recurse: yes
+
+- name: Start and enable Artifactory
+  systemd:
+    name: artifactory
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for Artifactory to start
+  wait_for:
+    port: 8081
+    delay: 30
+    timeout: 300
+
+- name: Print Artifactory access info
+  debug:
+    msg:
+      - "Artifactory is running"
+      - "UI: http://{{ ansible_host }}:8082"
+      - "Default credentials: admin / password"

@@ -1,0 +1,12 @@
+<VirtualHost *:80>
+    ServerName todo.{{ domain_name | default('dev.example.com') }}
+    DocumentRoot /var/www/html/php-todo/public
+
+    <Directory /var/www/html/php-todo/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/todo-error.log
+    CustomLog ${APACHE_LOG_DIR}/todo-access.log combined
+</VirtualHost>

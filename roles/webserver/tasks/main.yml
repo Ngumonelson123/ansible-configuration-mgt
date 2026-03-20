@@ -1,0 +1,31 @@
+---
+- name: Install Apache and PHP
+  apt:
+    name:
+      - apache2
+      - php
+      - libapache2-mod-php
+      - php-cli
+      - php-xml
+      - php-bcmath
+      - php-bz2
+      - php-intl
+      - php-gd
+      - php-mbstring
+      - php-mysql
+      - php-zip
+      - php-curl
+    state: present
+    update_cache: yes
+
+- name: Enable Apache mod_rewrite
+  apache2_module:
+    name: rewrite
+    state: present
+  notify: Restart Apache
+
+- name: Start and enable Apache
+  systemd:
+    name: apache2
+    state: started
+    enabled: yes

@@ -1,0 +1,10 @@
+---
+sonarqube_version: "7.9.3"
+sonarqube_download_url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-7.9.3.zip"
+sonarqube_install_dir: "/opt/sonarqube"
+
+sonar_db_name: "sonarqube"
+sonar_db_user: "sonar"
+sonar_db_password: "sonar"
+
+sonar_web_port: 9000

@@ -1,0 +1,21 @@
+---
+# Master playbook — imports all role-specific playbooks
+# Run with: ansible-playbook playbooks/site.yml -i inventory/<env>
+
+- name: Configure Jenkins server
+  import_playbook: jenkins.yml
+
+- name: Configure SonarQube server
+  import_playbook: sonarqube.yml
+
+- name: Configure Artifactory server
+  import_playbook: artifactory.yml
+
+- name: Configure Nginx reverse proxy (CI)
+  import_playbook: nginx.yml
+
+- name: Configure webservers (Tooling + TODO)
+  import_playbook: webservers.yml
+
+- name: Configure database server
+  import_playbook: db.yml

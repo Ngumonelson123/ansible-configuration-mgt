@@ -1,0 +1,5 @@
+---
+# Dev environment specific variables
+env: dev
+db_host: "98.86.118.151"
+domain_name: dev.example.com

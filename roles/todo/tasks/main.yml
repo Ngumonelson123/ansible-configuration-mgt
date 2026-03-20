@@ -1,0 +1,75 @@
+---
+- name: Install Composer
+  shell: |
+    curl -sS https://getcomposer.org/installer | php
+    mv composer.phar /usr/local/bin/composer
+    chmod +x /usr/local/bin/composer
+  args:
+    creates: /usr/local/bin/composer
+
+- name: Clone php-todo repository
+  git:
+    repo: "https://github.com/StegTechHub/php-todo.git"
+    dest: /var/www/html/php-todo
+    version: main
+    force: yes
+
+- name: Copy .env.sample to .env
+  copy:
+    src: /var/www/html/php-todo/.env.sample
+    dest: /var/www/html/php-todo/.env
+    remote_src: yes
+    force: no
+
+- name: Update .env DB settings
+  lineinfile:
+    path: /var/www/html/php-todo/.env
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: "^DB_HOST=", line: "DB_HOST={{ db_host | default('127.0.0.1') }}" }
+    - { regexp: "^DB_DATABASE=", line: "DB_DATABASE=homestead" }
+    - { regexp: "^DB_USERNAME=", line: "DB_USERNAME=homestead" }
+    - { regexp: "^DB_PASSWORD=", line: "DB_PASSWORD=sePret^i" }
+
+- name: Run composer install
+  composer:
+    command: install
+    working_dir: /var/www/html/php-todo
+
+- name: Run artisan migrations
+  command: php artisan migrate
+  args:
+    chdir: /var/www/html/php-todo
+
+- name: Run artisan db:seed
+  command: php artisan db:seed
+  args:
+    chdir: /var/www/html/php-todo
+
+- name: Run artisan key:generate
+  command: php artisan key:generate
+  args:
+    chdir: /var/www/html/php-todo
+
+- name: Set correct ownership
+  file:
+    path: /var/www/html/php-todo
+    owner: www-data
+    group: www-data
+    recurse: yes
+
+- name: Deploy Apache virtual host for TODO app
+  template:
+    src: todo.conf.j2
+    dest: /etc/apache2/sites-available/todo.conf
+    mode: "0644"
+  notify: Restart Apache
+
+- name: Enable TODO site
+  command: a2ensite todo.conf
+  notify: Restart Apache
+
+- name: Disable default Apache site
+  command: a2dissite 000-default.conf
+  notify: Restart Apache

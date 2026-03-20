@@ -1,0 +1,9 @@
+---
+- name: Install and configure MySQL database
+  hosts: db
+  become: true
+  gather_facts: true
+
+  roles:
+    - common
+    - mysql

@@ -1,0 +1,9 @@
+---
+- name: Install and configure SonarQube
+  hosts: sonarqube
+  become: true
+  gather_facts: true
+
+  roles:
+    - common
+    - sonarqube

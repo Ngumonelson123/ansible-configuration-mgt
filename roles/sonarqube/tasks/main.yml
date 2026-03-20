@@ -1,0 +1,187 @@
+---
+- name: Set vm.max_map_count
+  sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: yes
+
+- name: Set fs.file-max
+  sysctl:
+    name: fs.file-max
+    value: "65536"
+    state: present
+    reload: yes
+
+- name: Set ulimit nofile in limits.conf
+  lineinfile:
+    path: /etc/security/limits.conf
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "sonarqube   -   nofile   65536"
+    - "sonarqube   -   nproc    4096"
+
+- name: Install dependencies
+  apt:
+    name:
+      - wget
+      - unzip
+      - openjdk-17-jdk
+      - openjdk-17-jre
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+    update_cache: yes
+
+- name: Set Java 17 as default
+  alternatives:
+    name: java
+    path: /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+
+- name: Start and enable PostgreSQL
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create sonar PostgreSQL user
+  become_user: postgres
+  postgresql_user:
+    name: "{{ sonar_db_user }}"
+    password: "{{ sonar_db_password }}"
+    state: present
+
+- name: Create sonarqube database
+  become_user: postgres
+  postgresql_db:
+    name: "{{ sonar_db_name }}"
+    owner: "{{ sonar_db_user }}"
+    state: present
+
+- name: Grant privileges on sonarqube database
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ sonar_db_name }}"
+    role: "{{ sonar_db_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Create sonar group
+  group:
+    name: sonar
+    state: present
+
+- name: Create sonar user
+  user:
+    name: sonar
+    group: sonar
+    home: "{{ sonarqube_install_dir }}"
+    comment: "SonarQube service user"
+    system: yes
+    state: present
+
+- name: Download SonarQube
+  get_url:
+    url: "{{ sonarqube_download_url }}"
+    dest: /tmp/sonarqube.zip
+    mode: "0644"
+
+- name: Unzip SonarQube to /opt
+  unarchive:
+    src: /tmp/sonarqube.zip
+    dest: /opt
+    remote_src: yes
+
+- name: Check if extracted directory exists with version suffix
+  stat:
+    path: "/opt/sonarqube-{{ sonarqube_version }}"
+  register: sonar_versioned_dir
+
+- name: Remove existing sonarqube dir if it exists
+  file:
+    path: "{{ sonarqube_install_dir }}"
+    state: absent
+  when: sonar_versioned_dir.stat.exists
+
+- name: Move SonarQube to standard path
+  command: mv /opt/sonarqube-{{ sonarqube_version }} {{ sonarqube_install_dir }}
+  when: sonar_versioned_dir.stat.exists
+
+- name: Set ownership on SonarQube directory
+  file:
+    path: "{{ sonarqube_install_dir }}"
+    owner: sonar
+    group: sonar
+    recurse: yes
+
+- name: Verify sonar.properties exists
+  stat:
+    path: "{{ sonarqube_install_dir }}/conf/sonar.properties"
+  register: sonar_props
+
+- name: Fail with helpful message if sonar.properties missing
+  fail:
+    msg: "sonar.properties not found at {{ sonarqube_install_dir }}/conf/ — check /opt/ contents on the server"
+  when: not sonar_props.stat.exists
+
+- name: Configure sonar.properties (DB connection)
+  lineinfile:
+    path: "{{ sonarqube_install_dir }}/conf/sonar.properties"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: "^#?sonar.jdbc.username=", line: "sonar.jdbc.username={{ sonar_db_user }}" }
+    - { regexp: "^#?sonar.jdbc.password=", line: "sonar.jdbc.password={{ sonar_db_password }}" }
+    - { regexp: "^#?sonar.jdbc.url=.*postgresql", line: "sonar.jdbc.url=jdbc:postgresql://localhost:5432/{{ sonar_db_name }}" }
+    - { regexp: "^#?sonar.web.port=", line: "sonar.web.port={{ sonar_web_port }}" }
+
+- name: Set RUN_AS_USER in sonar.sh
+  lineinfile:
+    path: "{{ sonarqube_install_dir }}/bin/linux-x86-64/sonar.sh"
+    regexp: "^#?RUN_AS_USER="
+    line: "RUN_AS_USER=sonar"
+    state: present
+
+- name: Create SonarQube systemd service
+  copy:
+    dest: /etc/systemd/system/sonar.service
+    content: |
+      [Unit]
+      Description=SonarQube service
+      After=syslog.target network.target
+
+      [Service]
+      Type=forking
+      ExecStart={{ sonarqube_install_dir }}/bin/linux-x86-64/sonar.sh start
+      ExecStop={{ sonarqube_install_dir }}/bin/linux-x86-64/sonar.sh stop
+      User=sonar
+      Group=sonar
+      Restart=always
+      LimitNOFILE=65536
+      LimitNPROC=4096
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+  notify: Restart SonarQube
+
+- name: Reload systemd and enable SonarQube
+  systemd:
+    name: sonar
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for SonarQube to be available
+  wait_for:
+    port: "{{ sonar_web_port }}"
+    delay: 30
+    timeout: 180
+
+- name: Print SonarQube access info
+  debug:
+    msg: "SonarQube is running at http://{{ ansible_host }}:9000 — login with admin/admin"

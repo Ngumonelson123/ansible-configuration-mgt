@@ -1,0 +1,9 @@
+---
+- name: Install and configure Artifactory
+  hosts: artifact_repository
+  become: true
+  gather_facts: true
+
+  roles:
+    - common
+    - artifactory

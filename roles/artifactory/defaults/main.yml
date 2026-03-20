@@ -1,0 +1,4 @@
+---
+artifactory_version: "7.55.2"
+artifactory_service_port: 8081
+artifactory_ui_port: 8082

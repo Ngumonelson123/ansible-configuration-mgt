@@ -1,0 +1,19 @@
+---
+- name: Deploy Tooling web application
+  hosts: tooling
+  become: true
+  gather_facts: true
+
+  roles:
+    - common
+    - webserver
+    - tooling
+
+- name: Deploy TODO web application
+  hosts: todo
+  become: true
+
+  roles:
+    - common
+    - webserver
+    - todo

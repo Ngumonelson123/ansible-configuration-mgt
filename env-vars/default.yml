@@ -1,0 +1,5 @@
+---
+# Fallback defaults when no env-specific file is matched
+env: dev
+db_host: "127.0.0.1"
+domain_name: example.com

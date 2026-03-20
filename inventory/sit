@@ -1,0 +1,28 @@
+# SIT (System Integration Testing) Environment Inventory
+# Spin up these servers only when working on SIT deployments
+
+[tooling]
+<SIT-TOOLING-IP> ansible_user=ubuntu ansible_ssh_private_key_file=../project14-key.pem
+
+[todo]
+<SIT-TODO-IP> ansible_user=ubuntu ansible_ssh_private_key_file=../project14-key.pem
+
+[nginx]
+<SIT-NGINX-IP> ansible_user=ubuntu ansible_ssh_private_key_file=../project14-key.pem
+
+[db:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=../project14-key.pem
+ansible_python_interpreter=/usr/bin/python3
+
+[db]
+<SIT-DB-IP>
+
+[sit:children]
+tooling
+todo
+nginx
+db
+
+[sit:vars]
+ansible_python_interpreter=/usr/bin/python3

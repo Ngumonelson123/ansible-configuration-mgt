@@ -1,0 +1,160 @@
+---
+- name: Install Java 17
+  apt:
+    name: openjdk-17-jdk
+    state: present
+    update_cache: yes
+
+- name: Set Java 17 as default
+  alternatives:
+    name: java
+    path: /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+
+- name: Install PHP and dependencies
+  apt:
+    name:
+      - php
+      - libapache2-mod-php
+      - php-cli
+      - php-xml
+      - php-bcmath
+      - php-bz2
+      - php-intl
+      - php-gd
+      - php-mbstring
+      - php-mysql
+      - php-zip
+    state: present
+
+- name: Install Composer
+  shell: |
+    curl -sS https://getcomposer.org/installer | php
+    mv composer.phar /usr/local/bin/composer
+    chmod +x /usr/local/bin/composer
+  args:
+    creates: /usr/local/bin/composer
+
+- name: Create Jenkins keyring directory
+  file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Remove any existing Jenkins keyring
+  file:
+    path: /usr/share/keyrings/jenkins-keyring.gpg
+    state: absent
+
+- name: Import Jenkins GPG key from keyserver
+  shell: |
+    gpg --no-default-keyring \
+      --keyring /usr/share/keyrings/jenkins-keyring.gpg \
+      --keyserver hkps://keyserver.ubuntu.com \
+      --recv-keys 7198F4B714ABFC68
+    chmod 644 /usr/share/keyrings/jenkins-keyring.gpg
+  args:
+    executable: /bin/bash
+
+- name: Add Jenkins apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    content: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/\n"
+    mode: "0644"
+
+- name: Update apt cache after adding Jenkins repo
+  apt:
+    update_cache: yes
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present
+
+- name: Create Jenkins systemd override directory
+  file:
+    path: /etc/systemd/system/jenkins.service.d
+    state: directory
+    mode: "0755"
+
+- name: Set Java 17 for Jenkins systemd service
+  copy:
+    dest: /etc/systemd/system/jenkins.service.d/override.conf
+    content: |
+      [Service]
+      Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+    mode: "0644"
+  notify: Restart Jenkins
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Start and enable Jenkins
+  systemd:
+    name: jenkins
+    state: started
+    enabled: yes
+
+- name: Wait for Jenkins port to be available
+  wait_for:
+    port: 8080
+    delay: 10
+    timeout: 120
+
+- name: Wait for Jenkins initialAdminPassword file to exist
+  wait_for:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+    state: present
+    delay: 5
+    timeout: 120
+
+- name: Get Jenkins initial admin password
+  command: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_password
+  changed_when: false
+
+- name: Print Jenkins initial admin password
+  debug:
+    msg: "Jenkins initial admin password: {{ jenkins_password.stdout }}"
+
+- name: Add PHP 7.4 repository
+  apt_repository:
+    repo: ppa:ondrej/php
+    state: present
+
+- name: Install PHP 7.4 and extensions
+  apt:
+    name:
+      - php7.4
+      - php7.4-cli
+      - php7.4-xml
+      - php7.4-bcmath
+      - php7.4-bz2
+      - php7.4-intl
+      - php7.4-gd
+      - php7.4-mbstring
+      - php7.4-mysql
+      - php7.4-zip
+      - php7.4-curl
+    state: present
+    update_cache: yes
+
+- name: Set PHP 7.4 as default
+  alternatives:
+    name: php
+    path: /usr/bin/php7.4
+
+- name: Install Composer with PHP 7.4
+  shell: |
+    curl -sS https://getcomposer.org/installer | /usr/bin/php7.4
+    mv composer.phar /usr/local/bin/composer
+    chmod +x /usr/local/bin/composer
+  args:
+    creates: /usr/local/bin/composer
+
+- name: Install phploc
+  shell: |
+    wget -O /usr/local/bin/phploc https://phar.phpunit.de/phploc.phar
+    chmod +x /usr/local/bin/phploc
+  args:
+    creates: /usr/local/bin/phploc

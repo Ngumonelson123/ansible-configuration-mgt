@@ -1,0 +1,5 @@
+---
+mysql_root_password: "Root@12345"
+mysql_homestead_db: "homestead"
+mysql_homestead_user: "homestead"
+mysql_homestead_password: "sePret^i"

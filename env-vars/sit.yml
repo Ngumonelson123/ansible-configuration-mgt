@@ -1,0 +1,5 @@
+---
+# SIT environment specific variables
+env: sit
+db_host: "<DB-SIT-IP>"
+domain_name: sit.example.com
