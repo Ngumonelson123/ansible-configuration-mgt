@@ -1,14 +1,22 @@
 ---
+- name: Remove existing tooling directory (fix ownership issues)
+  file:
+    path: /var/www/html/tooling
+    state: absent
+  become: true
+
 - name: Clone Tooling repository
   git:
-    repo: "https://github.com/StegTechHub/tooling.git"
+    repo: "https://github.com/Ngumonelson123/tooling.git"
     dest: /var/www/html/tooling
     version: main
-    force: yes
+  become: true
+  become_user: ubuntu
 
-- name: Set correct ownership
+- name: Set correct ownership for Apache
   file:
     path: /var/www/html/tooling
     owner: www-data
     group: www-data
     recurse: yes
+  become: true
