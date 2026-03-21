@@ -1,6 +1,8 @@
 ---
-- name: Mark tooling directory as safe for git
-  command: git config --global --add safe.directory /var/www/html/tooling
+- name: Remove existing tooling directory to avoid ownership conflicts
+  file:
+    path: /var/www/html/tooling
+    state: absent
   become: true
 
 - name: Clone Tooling repository
