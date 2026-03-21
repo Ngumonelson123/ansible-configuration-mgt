@@ -1,27 +1,38 @@
-- name: Remove existing tooling directory (fix ownership issues)
+---
+- name: Grant ubuntu ownership for composer install
   file:
-    path: /var/www/html/tooling
-    state: absent
+    path: /var/www/html/todo
+    owner: ubuntu
+    group: ubuntu
+    recurse: yes
   become: true
 
-- name: Ensure /var/www/html is writable before cloning
-  file:
-    path: /var/www/html
-    owner: root
-    group: www-data
-    mode: "0775"          # group-writable so www-data members can write
+- name: Update .env DB settings
+  lineinfile:
+    path: /var/www/html/todo/.env
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^DB_HOST=', line: 'DB_HOST=10.0.1.219' }
+    - { regexp: '^DB_DATABASE=', line: 'DB_DATABASE=homestead' }
+    - { regexp: '^DB_USERNAME=', line: 'DB_USERNAME=homestead' }
+    - { regexp: '^DB_PASSWORD=', line: 'DB_PASSWORD=sePret^i' }
   become: true
 
-- name: Clone Tooling repository
-  git:
-    repo: "https://github.com/Ngumonelson123/tooling.git"
-    dest: /var/www/html/tooling
-    version: main
-  become: true             # ← run as root, NOT ubuntu
+- name: Run composer install
+  composer:
+    command: install
+    working_dir: /var/www/html/todo
+    no_dev: false
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    COMPOSER_ALLOW_SUPERUSER: "0"
 
-- name: Set correct ownership for Apache
+- name: Restore correct ownership for Apache
   file:
-    path: /var/www/html/tooling
+    path: /var/www/html/todo
     owner: www-data
     group: www-data
     recurse: yes
