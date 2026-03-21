@@ -1,8 +1,15 @@
----
 - name: Remove existing tooling directory (fix ownership issues)
   file:
     path: /var/www/html/tooling
     state: absent
+  become: true
+
+- name: Ensure /var/www/html is writable before cloning
+  file:
+    path: /var/www/html
+    owner: root
+    group: www-data
+    mode: "0775"          # group-writable so www-data members can write
   become: true
 
 - name: Clone Tooling repository
@@ -10,8 +17,7 @@
     repo: "https://github.com/Ngumonelson123/tooling.git"
     dest: /var/www/html/tooling
     version: main
-  become: true
-  become_user: ubuntu
+  become: true             # ← run as root, NOT ubuntu
 
 - name: Set correct ownership for Apache
   file:
@@ -19,4 +25,5 @@
     owner: www-data
     group: www-data
     recurse: yes
+    mode: "0755"
   become: true
