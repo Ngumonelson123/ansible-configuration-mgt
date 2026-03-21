@@ -1,52 +1,12 @@
 ---
-- name: Grant ubuntu ownership for composer install
-  file:
-    path: /var/www/html/tooling
-    owner: ubuntu
-    group: ubuntu
-    recurse: yes
+- name: Clone Tooling repository
+  git:
+    repo: "https://github.com/Ngumonelson123/tooling.git"
+    dest: /var/www/html/tooling
+    version: main
   become: true
 
-- name: Install required PHP and system packages
-  apt:
-    name:
-      - php
-      - php-cli
-      - php-mbstring
-      - php-xml
-      - php-zip
-      - php-curl
-      - unzip
-      - curl
-    state: present
-    update_cache: yes
-  become: true
-
-- name: Download Composer installer
-  get_url:
-    url: https://getcomposer.org/installer
-    dest: /tmp/composer-installer.php
-    mode: "0755"
-  become: true
-
-- name: Install Composer globally
-  command: php /tmp/composer-installer.php --install-dir=/usr/local/bin --filename=composer
-  args:
-    creates: /usr/local/bin/composer   # skips if composer already exists
-  become: true
-
-- name: Run composer install
-  composer:
-    command: install
-    working_dir: /var/www/html/tooling
-    no_dev: false
-  become: true
-  become_user: ubuntu
-  environment:
-    HOME: /home/ubuntu
-    COMPOSER_ALLOW_SUPERUSER: "0"
-
-- name: Restore correct ownership for Apache
+- name: Set correct ownership for Apache
   file:
     path: /var/www/html/tooling
     owner: www-data
@@ -54,3 +14,38 @@
     recurse: yes
     mode: "0755"
   become: true
+
+- name: Deploy Apache virtual host config for tooling
+  copy:
+    dest: /etc/apache2/sites-available/tooling.conf
+    content: |
+      <VirtualHost *:80>
+          ServerAdmin webmaster@localhost
+          DocumentRoot /var/www/html/tooling/html
+
+          <Directory /var/www/html/tooling/html>
+              Options Indexes FollowSymLinks
+              AllowOverride All
+              Require all granted
+          </Directory>
+
+          ErrorLog ${APACHE_LOG_DIR}/tooling-error.log
+          CustomLog ${APACHE_LOG_DIR}/tooling-access.log combined
+      </VirtualHost>
+  become: true
+  notify: Restart Apache
+
+- name: Enable tooling site
+  command: a2ensite tooling.conf
+  become: true
+  notify: Restart Apache
+
+- name: Disable default Apache site
+  command: a2dissite 000-default.conf
+  become: true
+  notify: Restart Apache
+
+- name: Enable Apache rewrite module
+  command: a2enmod rewrite
+  become: true
+  notify: Restart Apache
