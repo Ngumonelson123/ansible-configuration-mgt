@@ -40,7 +40,9 @@ pipeline {
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=. \
                         -Dsonar.sourceEncoding=UTF-8 \
-                        -Dsonar.php.exclusions=vendor/**"
+                        -Dsonar.php.exclusions=vendor/** \
+                        -Dsonar.exclusions=**/*.js,**/*.ts,**/*.css \
+                        -Dsonar.language=php"
                 }
             }
         }
@@ -74,5 +76,14 @@ pipeline {
             }
         }
 
+    }
+
+    post {
+        failure {
+            echo 'Pipeline failed — check SonarQube Quality Gate or Ansible logs'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
     }
 }
