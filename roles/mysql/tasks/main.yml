@@ -14,21 +14,13 @@
     state: started
     enabled: yes
 
-- name: Set MySQL root password using socket auth
-  community.mysql.mysql_user:
-    name: root
-    password: "{{ mysql_root_password }}"
-    login_unix_socket: /var/run/mysqld/mysqld.sock
-    host_all: yes
-    state: present
-
-- name: Create .my.cnf for root user
+- name: Create /root/.my.cnf for passwordless root access
   copy:
     dest: /root/.my.cnf
     content: |
       [client]
       user=root
-      password={{ mysql_root_password }}
+      password=Root@12345
     mode: "0600"
 
 - name: Create homestead database
@@ -38,7 +30,7 @@
     login_user: root
     login_password: "{{ mysql_root_password }}"
 
-- name: Create homestead user with remote access
+- name: Create homestead user
   community.mysql.mysql_user:
     name: "{{ mysql_homestead_user }}"
     password: "{{ mysql_homestead_password }}"
