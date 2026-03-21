@@ -6,6 +6,7 @@
     chmod +x /usr/local/bin/composer
   args:
     creates: /usr/local/bin/composer
+  become: true
 
 - name: Clone php-todo repository
   git:
@@ -13,6 +14,7 @@
     dest: /var/www/html/php-todo
     version: main
     force: yes
+  become: true
 
 - name: Create .env from .env.sample
   copy:
@@ -20,6 +22,7 @@
     dest: /var/www/html/php-todo/.env
     remote_src: yes
     force: no
+  become: true
 
 - name: Update .env DB settings
   lineinfile:
@@ -31,40 +34,62 @@
     - { regexp: "^DB_DATABASE=", line: "DB_DATABASE=homestead" }
     - { regexp: "^DB_USERNAME=", line: "DB_USERNAME=homestead" }
     - { regexp: "^DB_PASSWORD=", line: "DB_PASSWORD=sePret^i" }
+  become: true
+
+- name: Grant ubuntu ownership for composer install
+  file:
+    path: /var/www/html/php-todo
+    owner: ubuntu
+    group: ubuntu
+    recurse: yes
+  become: true
 
 - name: Run composer install
   composer:
     command: install
     working_dir: /var/www/html/php-todo
+    no_dev: false
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    COMPOSER_ALLOW_SUPERUSER: "0"
 
 - name: Run artisan key generate
   command: php artisan key:generate
   args:
     chdir: /var/www/html/php-todo
+  become: true
 
 - name: Run artisan migrations
   command: php artisan migrate --force
   args:
     chdir: /var/www/html/php-todo
+  become: true
 
-- name: Set correct ownership
+- name: Set correct ownership for Apache
   file:
     path: /var/www/html/php-todo
     owner: www-data
     group: www-data
     recurse: yes
+    mode: "0755"
+  become: true
 
 - name: Deploy Apache virtual host for TODO app
   template:
     src: todo.conf.j2
     dest: /etc/apache2/sites-available/todo.conf
     mode: "0644"
+  become: true
   notify: Restart Apache
 
 - name: Enable TODO site
   command: a2ensite todo.conf
+  become: true
   notify: Restart Apache
 
 - name: Disable default Apache site
   command: a2dissite 000-default.conf
+  become: true
   notify: Restart Apache
