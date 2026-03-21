@@ -4,6 +4,7 @@
     repo: "https://github.com/Ngumonelson123/tooling.git"
     dest: /var/www/html/tooling
     version: main
+    force: yes
   become: true
 
 - name: Set correct ownership for Apache
