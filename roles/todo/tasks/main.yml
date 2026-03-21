@@ -9,12 +9,12 @@
 
 - name: Clone php-todo repository
   git:
-    repo: "https://github.com/StegTechHub/php-todo.git"
+    repo: "https://github.com/Ngumonelson123/php-todo.git"
     dest: /var/www/html/php-todo
     version: main
     force: yes
 
-- name: Copy .env.sample to .env
+- name: Create .env from .env.sample
   copy:
     src: /var/www/html/php-todo/.env.sample
     dest: /var/www/html/php-todo/.env
@@ -27,7 +27,7 @@
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
   loop:
-    - { regexp: "^DB_HOST=", line: "DB_HOST={{ db_host | default('127.0.0.1') }}" }
+    - { regexp: "^DB_HOST=", line: "DB_HOST=10.0.1.219" }
     - { regexp: "^DB_DATABASE=", line: "DB_DATABASE=homestead" }
     - { regexp: "^DB_USERNAME=", line: "DB_USERNAME=homestead" }
     - { regexp: "^DB_PASSWORD=", line: "DB_PASSWORD=sePret^i" }
@@ -37,18 +37,13 @@
     command: install
     working_dir: /var/www/html/php-todo
 
-- name: Run artisan migrations
-  command: php artisan migrate
-  args:
-    chdir: /var/www/html/php-todo
-
-- name: Run artisan db:seed
-  command: php artisan db:seed
-  args:
-    chdir: /var/www/html/php-todo
-
-- name: Run artisan key:generate
+- name: Run artisan key generate
   command: php artisan key:generate
+  args:
+    chdir: /var/www/html/php-todo
+
+- name: Run artisan migrations
+  command: php artisan migrate --force
   args:
     chdir: /var/www/html/php-todo
 
